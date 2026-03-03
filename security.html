@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Check - adam.eus</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet">
+    
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            background-image: 
+                radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+            background-size: 40px 40px;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(233, 30, 99, 0.1) 0%, transparent 70%);
+            animation: pulse 8s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        .security-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .logo-text {
+            font-size: 2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .security-module {
+            width: 100%;
+            background: rgba(10, 10, 15, 0.4);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .security-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .title-bar {
+            width: 3px;
+            height: 24px;
+            background: linear-gradient(180deg, #E91E63, #9C27B0);
+            border-radius: 2px;
+        }
+
+        .title-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .security-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            margin-left: calc(3px + 0.75rem);
+        }
+
+        .turnstile-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem 0;
+            margin: 1rem 0;
+        }
+
+        .turnstile-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .loading-state {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(233, 30, 99, 0.3);
+            border-top-color: #E91E63;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .cloudflare-branding {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .cloudflare-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cloudflare-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #F6821F, #F9A825);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.7rem;
+            color: #ffffff;
+        }
+
+        .cloudflare-text {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.5px;
+        }
+
+        .cloudflare-links {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.7rem;
+        }
+
+        .cloudflare-links a {
+            color: rgba(255, 255, 255, 0.5);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .cloudflare-links a:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .ray-id {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 1.5rem;
+            color: #4CAF50;
+            font-size: 1rem;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        @media (max-width: 600px) {
+            .security-module {
+                padding: 1.5rem;
+            }
+
+            .logo-text {
+                font-size: 1.5rem;
+            }
+
+            .title-text {
+                font-size: 1.1rem;
+            }
+        }
+
+        .cf-turnstile {
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="security-container">
+        <div class="logo-section">
+            <img src="https://cdn.adam.eus/78145235.png" alt="adam.eus logo" class="logo-img">
+            <span class="logo-text">adam.eus</span>
+        </div>
+
+        <div class="security-module">
+            <div class="security-title">
+                <div class="title-bar"></div>
+                <span class="title-text">Security Check</span>
+            </div>
+            <p class="security-subtitle">Verification required to continue</p>
+
+            <div class="turnstile-container">
+                <div class="loading-state" id="loading-state">
+                    <div class="spinner"></div>
+                    <span>Vérification...</span>
+                </div>
+                
+                <div id="turnstile-widget"></div>
+            </div>
+
+            <div class="cloudflare-branding">
+                <div class="cloudflare-logo">
+                    <div class="cloudflare-icon">☁</div>
+                    <span class="cloudflare-text">CLOUDFLARE</span>
+                </div>
+                <div class="cloudflare-links">
+                    <a href="https://www.cloudflare.com/privacy/" target="_blank">Confidentialité</a>
+                    <a href="https://www.cloudflare.com/terms/" target="_blank">Conditions</a>
+                </div>
+            </div>
+
+            <div class="ray-id" id="ray-id">
+                ray id: <span id="ray-id-value">loading...</span>
+            </div>
+
+            <div class="success-message" id="success-message">
+                ✓ Verification successful! Redirecting...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateRayId() {
+            return Math.random().toString(36).substring(2, 18);
+        }
+
+        let turnstileWidgetId = null;
+        const siteKey = '0x4AAAAAACHyVYCaspS86V0b';
+        
+        const rayId = generateRayId();
+        document.getElementById('ray-id-value').textContent = rayId;
+
+        function renderTurnstile() {
+            if (window.turnstile) {
+                const loadingState = document.getElementById('loading-state');
+                
+                turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
+                    sitekey: siteKey,
+                    theme: 'dark',
+                    size: 'normal',
+                    callback: function(token) {
+                        if (loadingState) loadingState.style.display = 'none';
+                        document.getElementById('success-message').classList.add('show');
+                        handleVerificationSuccess(token);
+                    },
+                    'error-callback': function() {
+                        if (loadingState) {
+                            loadingState.innerHTML = '<span style="color: #f44336;">Verification failed. Please try again.</span>';
+                        }
+                    },
+                    'expired-callback': function() {
+                        if (loadingState) loadingState.style.display = 'flex';
+                    }
+                });
+                
+                setTimeout(() => {
+                    if (loadingState && document.getElementById('turnstile-widget').children.length > 0) {
+                        loadingState.style.display = 'none';
+                    }
+                }, 1000);
+            } else {
+                setTimeout(renderTurnstile, 100);
+            }
+        }
+
+        function handleVerificationSuccess(token) {
+            sessionStorage.setItem('turnstile_token', token);
+            sessionStorage.setItem('turnstile_ray_id', rayId);
+            sessionStorage.setItem('turnstile_verified', 'true');
+            
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                renderTurnstile();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+
