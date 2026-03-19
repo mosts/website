@@ -70,7 +70,7 @@ const workerURL = 'https://lastfm.adam.eus';
 let progressInterval = null;
 let currentTrackId = null;
 let trackStartTime = null;
-const DEFAULT_DURATION = 210; 
+const DEFAULT_DURATION = 210;
 
 function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
@@ -82,9 +82,7 @@ function updateProgress() {
     const progressFill = document.querySelector('.progress-fill');
     const timeElements = document.querySelectorAll('.progress-time');
     
-    if (!progressFill || !timeElements.length || !trackStartTime) {
-        return;
-    }
+    if (!progressFill || !timeElements.length || !trackStartTime) return;
     
     const elapsed = Math.floor((Date.now() - trackStartTime) / 1000);
     const progress = Math.min((elapsed / DEFAULT_DURATION) * 100, 100);
@@ -95,9 +93,7 @@ function updateProgress() {
 }
 
 function startProgressTracking(trackId) {
-    if (progressInterval) {
-        clearInterval(progressInterval);
-    }
+    if (progressInterval) clearInterval(progressInterval);
     
     if (trackId !== currentTrackId) {
         currentTrackId = trackId;
@@ -105,7 +101,6 @@ function startProgressTracking(trackId) {
     }
     
     updateProgress();
-    
     progressInterval = setInterval(updateProgress, 1000);
 }
 
@@ -250,13 +245,8 @@ function checkDistance(event) {
     const x = event.clientX;
     const y = event.clientY;
     
-    if (now - lastStarTime < MIN_TIME_BETWEEN_STARS) {
-        return;
-    }
-    
-    if (activeStars >= MAX_STARS) {
-        return;
-    }
+    if (now - lastStarTime < MIN_TIME_BETWEEN_STARS) return;
+    if (activeStars >= MAX_STARS) return;
     
     if (prevX !== null && prevY !== null) {
         const distanceX = x - prevX;
@@ -278,9 +268,7 @@ function checkDistance(event) {
 }
 
 function createStars(x, y) {
-    if (!starContainer) {
-        initStarContainer();
-    }
+    if (!starContainer) initStarContainer();
     
     const star = document.createElement('div');
     star.classList.add('star');
@@ -312,9 +300,7 @@ function createStars(x, y) {
 
 let throttleTimeout = null;
 document.body.addEventListener('mousemove', (event) => {
-    if (throttleTimeout) {
-        return;
-    }
+    if (throttleTimeout) return;
     
     throttleTimeout = setTimeout(() => {
         checkDistance(event);
@@ -322,20 +308,16 @@ document.body.addEventListener('mousemove', (event) => {
     }, 16);
 });
 
-// ─── Discord ───────────────────────────────────────────────────────────────────
-
 const DISCORD_WORKER_URL = 'https://discord-api.adam.eus';
 const DISCORD_CACHE_KEY = 'discord_servers_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes — matches worker KV TTL
+const CACHE_DURATION = 5 * 60 * 1000;
 
 function getCachedData(inviteCode) {
     try {
         const cached = localStorage.getItem(`${DISCORD_CACHE_KEY}_${inviteCode}`);
         if (cached) {
             const data = JSON.parse(cached);
-            if (Date.now() - data.timestamp < CACHE_DURATION) {
-                return data.data;
-            }
+            if (Date.now() - data.timestamp < CACHE_DURATION) return data.data;
         }
     } catch (e) {}
     return null;
@@ -358,11 +340,9 @@ async function fetchDiscordServerCount(inviteCode) {
 
     try {
         const response = await fetch(`${DISCORD_WORKER_URL}/?code=${inviteCode}`);
-
         if (!response.ok) throw new Error(`Worker returned ${response.status}`);
 
         const data = await response.json();
-
         const result = {
             memberCount: data.approximate_member_count || 0,
             onlineCount: data.approximate_presence_count || 0,
@@ -380,11 +360,8 @@ async function fetchDiscordServerCount(inviteCode) {
 }
 
 function formatMemberCount(count) {
-    if (count >= 1000000) {
-        return `${(count / 1000000).toFixed(1)}M members`;
-    } else if (count >= 1000) {
-        return `${(count / 1000).toFixed(1)}K members`;
-    }
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M members`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K members`;
     return `${count.toLocaleString()} members`;
 }
 
@@ -485,16 +462,14 @@ function updateTotalMembers(memberCounts) {
     }
 }
 
-(function () {
+function initDiscordDragScroll() {
     const grid = document.querySelector('.discord-servers-grid');
     if (!grid) return;
 
     const strips = grid.querySelectorAll('.discord-servers-scroll');
-
     let isDragging = false;
-    let startX = 0;
-    let startScrollLeft = 0;
     let isInsideGrid = false;
+
     const autoScrollState = Array.from(strips).map((strip, i) => ({
         strip,
         paused: false,
@@ -505,8 +480,6 @@ function updateTotalMembers(memberCounts) {
     function autoScroll(state) {
         if (!state.paused) {
             state.strip.scrollLeft += state.speed;
-
-            // jump back silently
             const half = state.strip.scrollWidth / 2;
             if (state.speed > 0 && state.strip.scrollLeft >= half) {
                 state.strip.scrollLeft -= half;
@@ -519,13 +492,8 @@ function updateTotalMembers(memberCounts) {
 
     autoScrollState.forEach(state => autoScroll(state));
 
-    function pauseAll() {
-        autoScrollState.forEach(s => s.paused = true);
-    }
-
-    function resumeAll() {
-        autoScrollState.forEach(s => s.paused = false);
-    }
+    function pauseAll() { autoScrollState.forEach(s => s.paused = true); }
+    function resumeAll() { autoScrollState.forEach(s => s.paused = false); }
 
     grid.addEventListener('mouseenter', () => {
         isInsideGrid = true;
@@ -542,10 +510,8 @@ function updateTotalMembers(memberCounts) {
 
     grid.addEventListener('mousedown', (e) => {
         isDragging = true;
-        startX = e.pageX;
-        startScrollLeft = strips[0].scrollLeft;
         grid.style.cursor = 'grabbing';
-        e.preventDefault(); // prevent text selection
+        e.preventDefault();
     });
 
     window.addEventListener('mouseup', () => {
@@ -557,9 +523,11 @@ function updateTotalMembers(memberCounts) {
 
     window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
-        const delta = e.pageX - startX;
         strips.forEach(strip => {
-            strip.scrollLeft = startScrollLeft - delta;
+            strip.scrollLeft -= e.movementX;
+            const half = strip.scrollWidth / 2;
+            if (strip.scrollLeft >= half) strip.scrollLeft -= half;
+            if (strip.scrollLeft <= 0) strip.scrollLeft += half;
         });
     });
 
@@ -582,14 +550,7 @@ function updateTotalMembers(memberCounts) {
     grid.addEventListener('touchend', () => {
         resumeAll();
     });
-
-    grid.addEventListener('click', (e) => {
-        if (Math.abs(strips[0].scrollLeft - startScrollLeft) > 5) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-    }, true);
-})();
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     createParticles();
