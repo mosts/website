@@ -1,4 +1,3 @@
-
 function createParticles() {
 const particlesContainer = document.getElementById('particles');
 const particleCount = 300;
@@ -107,7 +106,6 @@ function startProgressTracking(trackId) {
     
     updateProgress();
     
-
     progressInterval = setInterval(updateProgress, 1000);
 }
 
@@ -324,8 +322,11 @@ document.body.addEventListener('mousemove', (event) => {
     }, 16);
 });
 
+// ─── Discord ───────────────────────────────────────────────────────────────────
+
+const DISCORD_WORKER_URL = 'https://discord-api.adam.eus';
 const DISCORD_CACHE_KEY = 'discord_servers_cache';
-const CACHE_DURATION = 5 * 60 * 1000;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes — matches worker KV TTL
 
 function getCachedData(inviteCode) {
     try {
@@ -336,8 +337,7 @@ function getCachedData(inviteCode) {
                 return data.data;
             }
         }
-    } catch (e) {
-    }
+    } catch (e) {}
     return null;
 }
 
@@ -347,56 +347,34 @@ function setCachedData(inviteCode, data) {
             data: data,
             timestamp: Date.now()
         }));
-    } catch (e) {
-    }
+    } catch (e) {}
 }
 
 async function fetchDiscordServerCount(inviteCode) {
     if (!inviteCode) return null;
-    
+
     const cached = getCachedData(inviteCode);
-    if (cached) {
-        return cached;
-    }
-    
+    if (cached) return cached;
+
     try {
-        const proxies = [
-            'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://api.codetabs.com/v1/proxy?quest='
-        ];
-        
-        const apiUrl = `https://discord.com/api/v9/invites/${inviteCode}?with_counts=true`;
-        
-        let lastError = null;
-        for (const proxyUrl of proxies) {
-            try {
-                const response = await fetch(proxyUrl + encodeURIComponent(apiUrl), {
-                    cache: 'no-cache',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    const result = {
-                        memberCount: data.approximate_member_count || 0,
-                        onlineCount: data.approximate_presence_count || 0,
-                        serverIcon: data.guild?.icon ? `https://cdn.discordapp.com/icons/${data.guild.id}/${data.guild.icon}.png?size=64` : null
-                    };
-                    setCachedData(inviteCode, result);
-                    return result;
-                }
-            } catch (error) {
-                lastError = error;
-                continue;
-            }
-        }
-        
-        throw lastError || new Error('All proxies failed');
+        const response = await fetch(`${DISCORD_WORKER_URL}/?code=${inviteCode}`);
+
+        if (!response.ok) throw new Error(`Worker returned ${response.status}`);
+
+        const data = await response.json();
+
+        const result = {
+            memberCount: data.approximate_member_count || 0,
+            onlineCount: data.approximate_presence_count || 0,
+            serverIcon: data.guild?.icon
+                ? `https://cdn.discordapp.com/icons/${data.guild.id}/${data.guild.icon}.png?size=64`
+                : null
+        };
+
+        setCachedData(inviteCode, result);
+        return result;
     } catch (error) {
-        console.error(`Error fetching Discord server data for ${inviteCode}:`, error);
+        console.error(`Error fetching Discord data for ${inviteCode}:`, error);
         return null;
     }
 }
@@ -418,18 +396,14 @@ async function updateDiscordServerCounts() {
     
     serverCards.forEach(card => {
         const inviteCode = card.getAttribute('data-invite');
-        if (inviteCode) {
-            uniqueInvites.add(inviteCode);
-        }
+        if (inviteCode) uniqueInvites.add(inviteCode);
     });
     
     uniqueInvites.forEach(inviteCode => {
         const cached = getCachedData(inviteCode);
         if (cached) {
             memberCounts.set(inviteCode, cached.memberCount);
-            if (cached.serverIcon) {
-                serverIcons.set(inviteCode, cached.serverIcon);
-            }
+            if (cached.serverIcon) serverIcons.set(inviteCode, cached.serverIcon);
         }
     });
     
@@ -438,7 +412,7 @@ async function updateDiscordServerCounts() {
         updateTotalMembers(memberCounts);
     }
     
-    const fetchPromises = Array.from(uniqueInvites).map(inviteCode => 
+    const fetchPromises = Array.from(uniqueInvites).map(inviteCode =>
         fetchDiscordServerCount(inviteCode).then(data => ({ inviteCode, data }))
     );
     
@@ -447,14 +421,11 @@ async function updateDiscordServerCounts() {
     results.forEach(({ inviteCode, data }) => {
         if (data) {
             memberCounts.set(inviteCode, data.memberCount);
-            if (data.serverIcon) {
-                serverIcons.set(inviteCode, data.serverIcon);
-            }
+            if (data.serverIcon) serverIcons.set(inviteCode, data.serverIcon);
         }
     });
     
     updateServerCardsUI(serverCards, memberCounts, serverIcons);
-    
     updateTotalMembers(memberCounts);
 }
 
@@ -465,11 +436,9 @@ function updateServerCardsUI(serverCards, memberCounts, serverIcons) {
         
         const membersElement = card.querySelector('.server-members');
         if (membersElement) {
-            if (memberCounts.has(inviteCode)) {
-                membersElement.textContent = formatMemberCount(memberCounts.get(inviteCode));
-            } else {
-                membersElement.textContent = 'N/A members';
-            }
+            membersElement.textContent = memberCounts.has(inviteCode)
+                ? formatMemberCount(memberCounts.get(inviteCode))
+                : 'N/A members';
         }
         
         if (serverIcons.has(inviteCode)) {
@@ -478,16 +447,10 @@ function updateServerCardsUI(serverCards, memberCounts, serverIcons) {
             if (iconImg) {
                 iconImg.src = serverIcons.get(inviteCode);
                 iconImg.style.display = 'block';
-                iconImg.onload = function() {
-                    if (placeholder) {
-                        placeholder.style.display = 'none';
-                    }
-                };
-                iconImg.onerror = function() {
+                iconImg.onload = () => { if (placeholder) placeholder.style.display = 'none'; };
+                iconImg.onerror = () => {
                     iconImg.style.display = 'none';
-                    if (placeholder) {
-                        placeholder.style.display = 'flex';
-                    }
+                    if (placeholder) placeholder.style.display = 'flex';
                 };
             }
         }
@@ -499,20 +462,15 @@ function updateTotalMembers(memberCounts) {
     const totalServersElement = document.getElementById('total-servers');
     
     if (totalServersElement) {
-        const serverCount = memberCounts.size;
-        if (serverCount > 0) {
-            totalServersElement.textContent = serverCount.toString();
-        } else {
-            totalServersElement.textContent = 'Loading...';
-        }
+        totalServersElement.textContent = memberCounts.size > 0
+            ? memberCounts.size.toString()
+            : 'Loading...';
     }
     
     if (!totalMembersElement) return;
     
     let total = 0;
-    for (const count of memberCounts.values()) {
-        total += count;
-    }
+    for (const count of memberCounts.values()) total += count;
     
     if (total > 0) {
         if (total >= 1000000) {
