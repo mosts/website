@@ -485,12 +485,119 @@ function updateTotalMembers(memberCounts) {
     }
 }
 
+(function () {
+    const grid = document.querySelector('.discord-servers-grid');
+    if (!grid) return;
+
+    const strips = grid.querySelectorAll('.discord-servers-scroll');
+
+    let isDragging = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+    let isInsideGrid = false;
+    const autoScrollState = Array.from(strips).map((strip, i) => ({
+        strip,
+        paused: false,
+        speed: i % 2 === 0 ? 0.5 : -0.5,
+        raf: null,
+    }));
+
+    function autoScroll(state) {
+        if (!state.paused) {
+            state.strip.scrollLeft += state.speed;
+
+            // jump back silently
+            const half = state.strip.scrollWidth / 2;
+            if (state.speed > 0 && state.strip.scrollLeft >= half) {
+                state.strip.scrollLeft -= half;
+            } else if (state.speed < 0 && state.strip.scrollLeft <= 0) {
+                state.strip.scrollLeft += half;
+            }
+        }
+        state.raf = requestAnimationFrame(() => autoScroll(state));
+    }
+
+    autoScrollState.forEach(state => autoScroll(state));
+
+    function pauseAll() {
+        autoScrollState.forEach(s => s.paused = true);
+    }
+
+    function resumeAll() {
+        autoScrollState.forEach(s => s.paused = false);
+    }
+
+    grid.addEventListener('mouseenter', () => {
+        isInsideGrid = true;
+        pauseAll();
+        grid.style.cursor = 'grab';
+    });
+
+    grid.addEventListener('mouseleave', () => {
+        isInsideGrid = false;
+        isDragging = false;
+        grid.style.cursor = '';
+        resumeAll();
+    });
+
+    grid.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.pageX;
+        startScrollLeft = strips[0].scrollLeft;
+        grid.style.cursor = 'grabbing';
+        e.preventDefault(); // prevent text selection
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        grid.style.cursor = isInsideGrid ? 'grab' : '';
+        if (!isInsideGrid) resumeAll();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const delta = e.pageX - startX;
+        strips.forEach(strip => {
+            strip.scrollLeft = startScrollLeft - delta;
+        });
+    });
+
+    let touchStartX = 0;
+    let touchStartScrollLeft = 0;
+
+    grid.addEventListener('touchstart', (e) => {
+        pauseAll();
+        touchStartX = e.touches[0].pageX;
+        touchStartScrollLeft = strips[0].scrollLeft;
+    }, { passive: true });
+
+    grid.addEventListener('touchmove', (e) => {
+        const delta = touchStartX - e.touches[0].pageX;
+        strips.forEach(strip => {
+            strip.scrollLeft = touchStartScrollLeft + delta;
+        });
+    }, { passive: true });
+
+    grid.addEventListener('touchend', () => {
+        resumeAll();
+    });
+
+    grid.addEventListener('click', (e) => {
+        if (Math.abs(strips[0].scrollLeft - startScrollLeft) > 5) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     createParticles();
     initStarContainer();
     fetchLastFmTracks();
     updateDiscordServerCounts();
-    
+    initDiscordDragScroll();
+
     setInterval(fetchLastFmTracks, 30000);
     setInterval(updateDiscordServerCounts, 300000);
 });
